@@ -1,0 +1,3 @@
+/mnt/c/Users/doruf/info/poker/engine/build/CMakeFiles/poker_engine.dir
+/mnt/c/Users/doruf/info/poker/engine/build/CMakeFiles/edit_cache.dir
+/mnt/c/Users/doruf/info/poker/engine/build/CMakeFiles/rebuild_cache.dir
