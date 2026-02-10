@@ -39,6 +39,6 @@ int get_cards_left(const DecisionState& state, const int tableSize = 5) noexcept
 
 bool is_terminal(const DecisionState& state) noexcept;
 
-DecisionState apply_action(const DecisionState& state,  action::ActionType action);
+DecisionState apply_action(const DecisionState& state,  action::ActionType action, uint32_t& rng);
 
 }; // namespace state

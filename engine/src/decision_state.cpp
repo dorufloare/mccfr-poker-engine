@@ -3,7 +3,7 @@
 
 namespace state {
 
-DecisionState apply_action(const DecisionState& state, action::ActionType action) {
+DecisionState apply_action(const DecisionState& state, action::ActionType action, uint32_t& rng) {
     DecisionState next = state;
 
     if (action == action::ActionType::FOLD) {
@@ -36,10 +36,21 @@ DecisionState apply_action(const DecisionState& state, action::ActionType action
         next.to_call = raise_amount;
     }
 
-    if (next.to_call == 0 && next.stack_self > 0 && next.stack_opp > 0) {
-        if (next.street == Street::PREFLOP) next.street = Street::FLOP;
-        else if (next.street == Street::FLOP) next.street = Street::TURN;
-        else if (next.street == Street::TURN) next.street = Street::RIVER;
+    if (next.to_call == 0) {
+        cards::CardsMask used = next.hole_cards | next.board_cards;
+
+        if (next.street == Street::PREFLOP) {
+            next.street = Street::FLOP;
+            next.board_cards |= cards::draw_random_cards(rng, used, 3);
+        }
+        else if (next.street == Street::FLOP) {
+            next.street = Street::TURN;
+            next.board_cards |= cards::draw_random_cards(rng, used, 1);
+        }
+        else if (next.street == Street::TURN) {
+            next.street = Street::RIVER;
+            next.board_cards |= cards::draw_random_cards(rng, used, 1);
+        }
     }
 
     if (!is_terminal(next)) next.action_mask = action::ALL;

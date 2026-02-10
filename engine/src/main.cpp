@@ -89,7 +89,7 @@ int main() {
     for (auto& [key, I] : mccfr.get_infosets()) {
         float strat[3];
         I.get_strategy(strat, 1.f);
-        std::cout << "Infoset key: " << key << "\n";
+        std::cout << "Infoset key: " << infoset_key_to_string(key) << "\n";
         std::cout << "  FOLD: "  << strat[0] 
                   << ", CALL: " << strat[1] 
                   << ", RAISE: "<< strat[2] << "\n\n";

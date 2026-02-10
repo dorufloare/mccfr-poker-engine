@@ -19,7 +19,7 @@ float MCCFR::traverse(const state::DecisionState& state, float reach_self, float
     int action_index = random_utils::sample_discrete(strategy, action::ACTIONS, rng);
     action::ActionType action = static_cast<action::ActionType>(action_index);
 
-    state::DecisionState next_state = state::apply_action(state, action);
+    state::DecisionState next_state = state::apply_action(state, action, rng);
     float value = -traverse(next_state, reach_opp, reach_self * strategy[action_index], rng);
 
     for (int i = 0; i < action::ACTIONS; ++i) {
@@ -40,11 +40,19 @@ InfoSet& MCCFR::get_infoset(const state::DecisionState& state) {
 }
 
 inline InfoSetKey make_key(const state::DecisionState& s) {
-    return
-        s.hole_cards ^
-        (s.board_cards << 1) ^
-        (static_cast<uint64_t>(s.street) << 48) ^
-        (static_cast<uint64_t>(s.position) << 56);
+    InfoSetKey key;
+    key.hole = s.hole_cards;
+    key.board = s.board_cards;
+    key.street = static_cast<uint8_t>(s.street);
+    key.position = static_cast<uint8_t>(s.position);
+    return key;
+}
+
+std::string infoset_key_to_string(const InfoSetKey& key) {
+    return "Hole: " + cards::mask_to_string(key.hole) +
+           ", Board: " + cards::mask_to_string(key.board) +
+           ", Street: " + std::to_string(static_cast<int>(key.street)) +
+           ", Position: " + std::to_string(static_cast<int>(key.position));
 }
 
 // Samples random opponent hole cards and remaining board cards, evaluates the terminal value of the hand for the current player
