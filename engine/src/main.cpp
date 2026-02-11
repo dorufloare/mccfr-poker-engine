@@ -63,7 +63,7 @@ int main() {
     s.pot_size     = 2;
     s.stack_self   = 10;
     s.stack_opp    = 10;
-    s.to_call      = 1;
+    s.to_call      = 0;    s.street_actions = 0; // No actions taken yet on preflop
 
     // Draw hole cards (reduced deck for testing)
     s.hole_cards = draw_random_card(rng, 0) | draw_random_card(rng, 0);
@@ -78,10 +78,10 @@ int main() {
     MCCFR mccfr;
 
     // 3️⃣ Run a few iterations to let MCCFR update regrets
-    const int iterations = 50000;
+    const int iterations = 1000000;
     for (int i = 0; i < iterations; ++i) {
         float util = mccfr.traverse(s, 1.f, 1.f, rng);
-        if (i % 1000 == 0) std::cout << "Iteration " << i << ", utility: " << util << "\n";
+        //if (i % 1000 == 0) std::cout << "Iteration " << i << ", utility: " << util << "\n";
     }
 
     // 4️⃣ Print learned strategies

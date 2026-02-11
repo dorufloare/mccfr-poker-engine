@@ -6,6 +6,11 @@
 
 namespace mccfr {
 
+bool InfoSetKey::operator==(const InfoSetKey& other) const {
+    InfoSetKeyHash hasher;
+    return hasher(*this) == hasher(other);
+}
+
 float MCCFR::traverse(const state::DecisionState& state, float reach_self, float reach_opp, uint32_t& rng) {
     if (state::is_terminal_node(state)) {
         return get_terminal_evaluation_from_state(state, rng);
@@ -34,6 +39,19 @@ float MCCFR::traverse(const state::DecisionState& state, float reach_self, float
     return value;
 }
 
+ size_t InfoSetKeyHash::operator()(const InfoSetKey& k) const noexcept {
+        size_t seed = 0;
+        cards::CardsMask combined = k.hole | k.board;
+        
+        hash_combine(seed, std::hash<uint64_t>{}(eval::highest_pair(combined)));
+        hash_combine(seed, std::hash<uint64_t>{}(eval::highest_card(combined)));
+        hash_combine(seed, std::hash<uint8_t>{}(k.street));
+        hash_combine(seed, std::hash<uint8_t>{}(k.position));
+    hash_combine(seed, std::hash<uint8_t>{}(k.street_actions));
+
+        return seed;
+    }
+
 InfoSet& MCCFR::get_infoset(const state::DecisionState& state) {
     InfoSetKey key = make_key(state);
     auto it = infosets.find(key);
@@ -49,6 +67,7 @@ inline InfoSetKey make_key(const state::DecisionState& s) {
     key.board = s.board_cards;
     key.street = static_cast<uint8_t>(s.street);
     key.position = static_cast<uint8_t>(s.position);
+    key.street_actions = s.street_actions;
     return key;
 }
 
@@ -56,7 +75,8 @@ std::string infoset_key_to_string(const InfoSetKey& key) {
     return "Hole: " + cards::mask_to_string(key.hole) +
            ", Board: " + cards::mask_to_string(key.board) +
            ", Street: " + std::to_string(static_cast<int>(key.street)) +
-           ", Position: " + std::to_string(static_cast<int>(key.position));
+           ", Position: " + std::to_string(static_cast<int>(key.position)) +
+           ", Actions: " + std::to_string(static_cast<int>(key.street_actions));
 }
 
 // Samples random opponent hole cards and remaining board cards, evaluates the terminal value of the hand for the current player

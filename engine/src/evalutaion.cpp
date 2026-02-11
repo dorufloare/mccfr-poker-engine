@@ -5,7 +5,7 @@
 
 namespace eval {
 
-inline int highest_pair(cards::CardsMask mask) noexcept {
+int highest_pair(cards::CardsMask mask) noexcept {
     // Check ranks from high to low
     for (int r = cards::RANKS - 1; r >= 0; --r) {
         // Count how many suits of this rank exist
@@ -18,7 +18,7 @@ inline int highest_pair(cards::CardsMask mask) noexcept {
     return -1; // no pair
 }
 
-inline int highest_card(cards::CardsMask mask) noexcept {
+int highest_card(cards::CardsMask mask) noexcept {
     for (int r = cards::RANKS - 1; r >= 0; --r) {
         for (int s = 0; s < cards::SUITS; ++s) {
             if (mask & (1ULL << (s * cards::RANKS + r))) return r;

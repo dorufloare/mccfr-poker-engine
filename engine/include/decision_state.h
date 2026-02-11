@@ -33,6 +33,8 @@ struct DecisionState {
     Chips to_call;
     Chips stack_self;
     Chips stack_opp;
+    
+    uint8_t street_actions; // Number of actions taken on current street
 };
 
 int get_cards_left(const DecisionState& state, const int tableSize = 5) noexcept;

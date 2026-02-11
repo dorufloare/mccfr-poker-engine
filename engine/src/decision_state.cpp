@@ -36,12 +36,20 @@ DecisionState apply_action(const DecisionState& state, action::ActionType action
         next.to_call = raise_amount;
     }
 
+    // Increment action count on current street
+    next.street_actions++;
+
     if (next.to_call == 0) {
+        // Both players called/checked - advance street
         if (next.street != Street::RIVER) {
             next.street = static_cast<Street>(static_cast<uint8_t>(next.street) + 1);
+            next.street_actions = 0; 
         } else {
-            // Move to showdown
+            // Stay on river for showdown
         }
+    } else {
+        // Someone raised - reset action count as we need both players to act again
+        next.street_actions = 1; // The raiser has acted
     }
 
     if (!is_terminal_node(next)) next.action_mask = action::ALL;
@@ -68,7 +76,8 @@ bool is_chance_node(const DecisionState& state) noexcept {
 
 bool is_terminal_node(const DecisionState& state) noexcept {
     if (state.stack_self == 0 || state.stack_opp == 0) return true; // all-in 
-    if (get_cards_left(state) == 0 && state.to_call == 0 && state.action_mask == action::NONE) return true; // showdown
+    // On river with no bet to call: only terminal if both players have acted (street_actions >= 2)
+    if (get_cards_left(state) == 0 && state.to_call == 0 && state.street_actions >= 2) return true; // showdown
     return false;
 }
 

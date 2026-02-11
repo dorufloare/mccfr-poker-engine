@@ -10,13 +10,9 @@ struct InfoSetKey {
     cards::CardsMask board;
     uint8_t street;
     uint8_t position;
+    uint8_t street_actions;
 
-    bool operator==(const InfoSetKey& other) const {
-        return hole == other.hole &&
-               board == other.board &&
-               street == other.street &&
-               position == other.position;
-    }
+    bool operator==(const InfoSetKey& other) const;
 };
 
 struct InfoSetKeyHash {
@@ -24,17 +20,9 @@ struct InfoSetKeyHash {
         seed ^= value + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
     }
 
-    size_t operator()(const InfoSetKey& k) const noexcept {
-        size_t seed = 0;
-
-        hash_combine(seed, std::hash<uint64_t>{}(k.hole));
-        hash_combine(seed, std::hash<uint64_t>{}(k.board));
-        hash_combine(seed, std::hash<uint8_t>{}(static_cast<uint8_t>(k.street)));
-        hash_combine(seed, std::hash<uint8_t>{}(static_cast<uint8_t>(k.position)));
-
-        return seed;
-    }
+    size_t operator()(const InfoSetKey& k) const noexcept;
 };
+
 class MCCFR {
 public:
     float traverse(const state::DecisionState& state, float reach_self, float reach_opp, uint32_t& rng);

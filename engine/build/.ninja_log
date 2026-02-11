@@ -1,12 +1,12 @@
 # ninja log v5
-29	535	1770726535045442200	CMakeFiles/poker_engine.dir/src/info_set.cpp.o	1b9f042220085a58
-31	777	1770826509520922600	CMakeFiles/poker_engine.dir/src/bots/dumb_bot.cpp.o	48c33e884f406ab7
-37	827	1770826509576192500	CMakeFiles/poker_engine.dir/src/evalutaion.cpp.o	f6c80977e976e95
-30	770	1770834168793628400	CMakeFiles/poker_engine.dir/src/decision_state.cpp.o	103c9fb1b9bd979
-29	873	1770826509621073500	CMakeFiles/poker_engine.dir/io/binary_stdio.cpp.o	55579fab2bacbcc8
-35	895	1770826509646381200	CMakeFiles/poker_engine.dir/src/engine.cpp.o	d519ead2644cf709
-33	1006	1770834169043614500	CMakeFiles/poker_engine.dir/src/mccfr.cpp.o	9e4d026ee7258002
-37	805	1770834305126566100	CMakeFiles/poker_engine.dir/src/main.cpp.o	ff166313aeade567
-811	1075	1770834305415286200	poker_engine	54b6559de91f0eff
-29	743	1770834426209476800	CMakeFiles/poker_engine.dir/src/main.cpp.o	ff166313aeade567
-748	983	1770834426469109000	poker_engine	54b6559de91f0eff
+39	483	1770836943325347100	CMakeFiles/poker_engine.dir/src/info_set.cpp.o	1b9f042220085a58
+46	804	1770835793007651700	CMakeFiles/poker_engine.dir/src/bots/dumb_bot.cpp.o	48c33e884f406ab7
+29	671	1770837135885509400	CMakeFiles/poker_engine.dir/src/evalutaion.cpp.o	f6c80977e976e95
+48	879	1770835793085466700	CMakeFiles/poker_engine.dir/src/decision_state.cpp.o	103c9fb1b9bd979
+42	868	1770835793084463600	CMakeFiles/poker_engine.dir/io/binary_stdio.cpp.o	55579fab2bacbcc8
+49	909	1770835793125015800	CMakeFiles/poker_engine.dir/src/engine.cpp.o	d519ead2644cf709
+30	893	1770837759596527800	CMakeFiles/poker_engine.dir/src/mccfr.cpp.o	9e4d026ee7258002
+27	883	1770837826585201100	CMakeFiles/poker_engine.dir/src/main.cpp.o	ff166313aeade567
+887	1118	1770837826837587000	poker_engine	54b6559de91f0eff
+29	943	1770838063900617100	CMakeFiles/poker_engine.dir/src/mccfr.cpp.o	9e4d026ee7258002
+949	1228	1770838064205812500	poker_engine	54b6559de91f0eff
