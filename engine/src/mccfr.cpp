@@ -7,8 +7,12 @@
 namespace mccfr {
 
 float MCCFR::traverse(const state::DecisionState& state, float reach_self, float reach_opp, uint32_t& rng) {
-    if (state::is_terminal(state)) {
+    if (state::is_terminal_node(state)) {
         return get_terminal_evaluation_from_state(state, rng);
+    }
+    if (state::is_chance_node(state)) {
+        state::DecisionState next = state::deal_cards(state, rng);
+        return traverse(next, reach_self, reach_opp, rng);
     }
 
     InfoSet& infoset = get_infoset(state);
@@ -19,7 +23,7 @@ float MCCFR::traverse(const state::DecisionState& state, float reach_self, float
     int action_index = random_utils::sample_discrete(strategy, action::ACTIONS, rng);
     action::ActionType action = static_cast<action::ActionType>(action_index);
 
-    state::DecisionState next_state = state::apply_action(state, action, rng);
+    state::DecisionState next_state = state::apply_action(state, action);
     float value = -traverse(next_state, reach_opp, reach_self * strategy[action_index], rng);
 
     for (int i = 0; i < action::ACTIONS; ++i) {

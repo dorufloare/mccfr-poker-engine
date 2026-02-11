@@ -37,8 +37,12 @@ struct DecisionState {
 
 int get_cards_left(const DecisionState& state, const int tableSize = 5) noexcept;
 
-bool is_terminal(const DecisionState& state) noexcept;
+bool is_terminal_node(const DecisionState& state) noexcept;
 
-DecisionState apply_action(const DecisionState& state,  action::ActionType action, uint32_t& rng);
+bool is_chance_node(const DecisionState& state) noexcept;
+
+DecisionState apply_action(const DecisionState& state,  action::ActionType action);
+
+DecisionState deal_cards(DecisionState state, uint32_t& rng);
 
 }; // namespace state
