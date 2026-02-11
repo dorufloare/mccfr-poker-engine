@@ -20,15 +20,21 @@ struct InfoSetKey {
 };
 
 struct InfoSetKeyHash {
+    static inline void hash_combine(size_t& seed, size_t value) noexcept {
+        seed ^= value + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
+    }
+
     size_t operator()(const InfoSetKey& k) const noexcept {
-        size_t h = k.hole;
-        h ^= k.board + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
-        h ^= (size_t(k.street) << 1);
-        h ^= (size_t(k.position) << 2);
-        return h;
+        size_t seed = 0;
+
+        hash_combine(seed, std::hash<uint64_t>{}(k.hole));
+        hash_combine(seed, std::hash<uint64_t>{}(k.board));
+        hash_combine(seed, std::hash<uint8_t>{}(static_cast<uint8_t>(k.street)));
+        hash_combine(seed, std::hash<uint8_t>{}(static_cast<uint8_t>(k.position)));
+
+        return seed;
     }
 };
-
 class MCCFR {
 public:
     float traverse(const state::DecisionState& state, float reach_self, float reach_opp, uint32_t& rng);

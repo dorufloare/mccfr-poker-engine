@@ -78,7 +78,7 @@ int main() {
     MCCFR mccfr;
 
     // 3️⃣ Run a few iterations to let MCCFR update regrets
-    const int iterations = 5000;
+    const int iterations = 50000;
     for (int i = 0; i < iterations; ++i) {
         float util = mccfr.traverse(s, 1.f, 1.f, rng);
         if (i % 1000 == 0) std::cout << "Iteration " << i << ", utility: " << util << "\n";
@@ -95,9 +95,7 @@ int main() {
                   << ", RAISE: "<< strat[2] << "\n\n";
     }
 
-    // 5️⃣ Test showdown evaluation
-    std::cout << "Testing showdown evaluations:\n";
-    test_showdowns();
+    
 
     return 0;
 }

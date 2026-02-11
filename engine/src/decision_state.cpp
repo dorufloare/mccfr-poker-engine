@@ -68,7 +68,7 @@ bool is_chance_node(const DecisionState& state) noexcept {
 
 bool is_terminal_node(const DecisionState& state) noexcept {
     if (state.stack_self == 0 || state.stack_opp == 0) return true; // all-in 
-    if (get_cards_left(state) == 0 && state.to_call == 0) return true; // showdown
+    if (get_cards_left(state) == 0 && state.to_call == 0 && state.action_mask == action::NONE) return true; // showdown
     return false;
 }
 
