@@ -1,12 +1,14 @@
 # ninja log v5
-39	483	1770836943325347100	CMakeFiles/poker_engine.dir/src/info_set.cpp.o	1b9f042220085a58
-46	804	1770835793007651700	CMakeFiles/poker_engine.dir/src/bots/dumb_bot.cpp.o	48c33e884f406ab7
-29	671	1770837135885509400	CMakeFiles/poker_engine.dir/src/evalutaion.cpp.o	f6c80977e976e95
-48	879	1770835793085466700	CMakeFiles/poker_engine.dir/src/decision_state.cpp.o	103c9fb1b9bd979
-42	868	1770835793084463600	CMakeFiles/poker_engine.dir/io/binary_stdio.cpp.o	55579fab2bacbcc8
-49	909	1770835793125015800	CMakeFiles/poker_engine.dir/src/engine.cpp.o	d519ead2644cf709
-30	893	1770837759596527800	CMakeFiles/poker_engine.dir/src/mccfr.cpp.o	9e4d026ee7258002
-27	883	1770837826585201100	CMakeFiles/poker_engine.dir/src/main.cpp.o	ff166313aeade567
-887	1118	1770837826837587000	poker_engine	54b6559de91f0eff
-29	943	1770838063900617100	CMakeFiles/poker_engine.dir/src/mccfr.cpp.o	9e4d026ee7258002
-949	1228	1770838064205812500	poker_engine	54b6559de91f0eff
+33	533	1770992900417075600	CMakeFiles/poker_engine.dir/src/info_set.cpp.o	1b9f042220085a58
+25	963	1770992900846932800	CMakeFiles/poker_engine.dir/src/bots/dumb_bot.cpp.o	48c33e884f406ab7
+30	1041	1770992900929518700	CMakeFiles/poker_engine.dir/src/evalutaion.cpp.o	f6c80977e976e95
+39	801	1770992997003778400	CMakeFiles/poker_engine.dir/src/decision_state.cpp.o	103c9fb1b9bd979
+24	1107	1770992900996205300	CMakeFiles/poker_engine.dir/io/binary_stdio.cpp.o	55579fab2bacbcc8
+28	1128	1770992901011792400	CMakeFiles/poker_engine.dir/src/engine.cpp.o	d519ead2644cf709
+41	1022	1770992997225850500	CMakeFiles/poker_engine.dir/src/main.cpp.o	ff166313aeade567
+42	1315	1770992997520400000	CMakeFiles/poker_engine.dir/src/mccfr.cpp.o	9e4d026ee7258002
+1318	1586	1770992997792750100	poker_engine	54b6559de91f0eff
+37	996	1770993266599546200	CMakeFiles/poker_engine.dir/src/decision_state.cpp.o	103c9fb1b9bd979
+41	1192	1770993266797448900	CMakeFiles/poker_engine.dir/src/main.cpp.o	ff166313aeade567
+43	1555	1770993267160584000	CMakeFiles/poker_engine.dir/src/mccfr.cpp.o	9e4d026ee7258002
+1560	2169	1770993267779519600	poker_engine	54b6559de91f0eff

@@ -7,11 +7,13 @@ DecisionState apply_action(const DecisionState& state, action::ActionType action
     DecisionState next = state;
 
     if (action == action::ActionType::FOLD) {
-        // Opponent wins the pot
-        next.stack_self = 0;    
+        if (state.to_call == 0) {
+            return next; 
+        }
+
         next.stack_opp += next.pot_size;
         next.pot_size = 0;
-        next.action_mask = 0;
+        next.action_mask = action::NONE;
         next.to_call = 0;
         return next;
     }
@@ -25,13 +27,13 @@ DecisionState apply_action(const DecisionState& state, action::ActionType action
         next.to_call = 0; 
     }
 
-    // TODO: raise logic
     if (action == action::ActionType::RAISE) {
-        Chips raise_amount = 1;
-
-        raise_amount = std::min(raise_amount, next.stack_self);
-        next.stack_self -= raise_amount;
-        next.pot_size += raise_amount;
+        Chips raise_amount = std::max(static_cast<Chips>(1), static_cast<Chips>(state.pot_size / 2));
+        Chips total_bet = state.to_call + raise_amount;
+        total_bet = std::min(total_bet, next.stack_self);
+        
+        next.stack_self -= total_bet;
+        next.pot_size += total_bet;
         
         next.to_call = raise_amount;
     }
@@ -49,11 +51,27 @@ DecisionState apply_action(const DecisionState& state, action::ActionType action
         }
     } else {
         // Someone raised - reset action count as we need both players to act again
-        next.street_actions = 1; // The raiser has acted
+        next.street_actions = 1; 
     }
 
-    if (!is_terminal_node(next)) next.action_mask = action::ALL;
-    else next.action_mask = action::NONE;
+    if (!is_terminal_node(next)) {
+        // Set valid actions based on game state
+        if (next.to_call == 0) {
+            // No bet to call: can check (CALL) or bet (RAISE), but not fold
+            next.action_mask = action::CALL_MASK | action::RAISE_MASK;
+        } else {
+            // Bet to call: can fold, call, or raise
+            next.action_mask = action::ALL;
+        }
+    } else {
+        next.action_mask = action::NONE;
+    }
+
+    // Swap perspectives (self becomes opp and vice versa) since it's now opponent's turn
+    if (!is_terminal_node(next)) {
+        std::swap(next.stack_self, next.stack_opp);
+        next.position = (next.position == Position::IN_POSITION) ? Position::OUT_OF_POSITION : Position::IN_POSITION;
+    }
 
     return next;
 }
