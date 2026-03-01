@@ -13,90 +13,63 @@ bool InfoSetKey::operator==(const InfoSetKey& other) const {
 }
 
 float MCCFR::traverse(const state::DecisionState& state, float reach_self, float reach_opp, uint32_t& rng) {
-    static int depth = 0;
-    depth++;
-    if (depth > 100) {
-        std::cerr << "ERROR: Recursion depth exceeded!" << std::endl;
-        depth--;
-        return 0.f;
-    }
-    
     if (state::is_terminal_node(state)) {
-        depth--;
         return get_terminal_evaluation_from_state(state, rng);
     }
     if (state::is_chance_node(state)) {
         state::DecisionState next = state::deal_cards(state, rng);
-        float result = traverse(next, reach_self, reach_opp, rng);
-        depth--;
-        return result;
+        return traverse(next, reach_self, reach_opp, rng);
     }
 
     InfoSet& infoset = get_infoset(state);
     float strategy[action::ACTIONS];
-    float action_values[action::ACTIONS];
+    float action_values[action::ACTIONS] = {};
 
-    infoset.get_strategy(strategy, reach_self);
-    
+    // Get current regret-matching strategy
+    infoset.get_current_strategy(strategy);
+
     // Zero out invalid actions and renormalize
     float norm = 0.f;
     for (int i = 0; i < action::ACTIONS; ++i) {
-        action::ActionsMask action_bit = 1 << i;
-        if ((state.action_mask & action_bit) == 0) {
+        if ((state.action_mask & (1 << i)) == 0) {
             strategy[i] = 0.f;
         } else {
             norm += strategy[i];
         }
     }
-    
-    // Renormalize valid actions
     if (norm > 0.f) {
-        for (int i = 0; i < action::ACTIONS; ++i) {
-            action::ActionsMask action_bit = 1 << i;
-            if ((state.action_mask & action_bit) != 0) {
-                strategy[i] /= norm;
-            }
-        }
+        for (int i = 0; i < action::ACTIONS; ++i)
+            if (state.action_mask & (1 << i)) strategy[i] /= norm;
     } else {
-        // If all regrets are negative, use uniform over valid actions
-        int valid_count = 0;
-        for (int i = 0; i < action::ACTIONS; ++i) {
-            action::ActionsMask action_bit = 1 << i;
-            if ((state.action_mask & action_bit) != 0) {
-                valid_count++;
-            }
-        }
-        for (int i = 0; i < action::ACTIONS; ++i) {
-            action::ActionsMask action_bit = 1 << i;
-            strategy[i] = ((state.action_mask & action_bit) != 0) ? (1.f / valid_count) : 0.f;
-        }
+        int valid = 0;
+        for (int i = 0; i < action::ACTIONS; ++i)
+            if (state.action_mask & (1 << i)) valid++;
+        for (int i = 0; i < action::ACTIONS; ++i)
+            strategy[i] = (state.action_mask & (1 << i)) ? (1.f / valid) : 0.f;
     }
+
+    infoset.accumulate_strategy(strategy, reach_self);
 
     float node_value = 0.f;
 
     for (int i = 0; i < action::ACTIONS; ++i) {
-        action::ActionType action = static_cast<action::ActionType>(i);
-        action::ActionsMask action_bit = 1 << i;
-        
-        if ((state.action_mask & action_bit) == 0) {
+        if ((state.action_mask & (1 << i)) == 0) {
             action_values[i] = 0.f;
             continue;
         }
-        
+        action::ActionType action = static_cast<action::ActionType>(i);
         state::DecisionState next_state = state::apply_action(state, action);
         action_values[i] = -traverse(next_state, reach_opp, reach_self * strategy[i], rng);
         node_value += strategy[i] * action_values[i];
     }
 
     for (int i = 0; i < action::ACTIONS; ++i) {
-        action::ActionsMask action_bit = 1 << i;
-        if ((state.action_mask & action_bit) != 0) {
+        if (state.action_mask & (1 << i)) {
             float regret = action_values[i] - node_value;
             infoset.regret_sum[i] += regret * reach_opp;
         }
     }
 
-    depth--;
     return node_value;
 }
 
@@ -140,15 +113,30 @@ std::string infoset_key_to_string(const InfoSetKey& key) {
            ", Actions: " + std::to_string(static_cast<int>(key.street_actions));
 }
 
-// Samples random opponent hole cards and remaining board cards, evaluates the terminal value of the hand for the current player
+// Evaluates terminal value using both players' known hole cards
 inline float get_terminal_evaluation_from_state(const state::DecisionState& s, uint32_t& rng) {
-    cards::CardsMask used_cards = s.hole_cards | s.board_cards;
-    cards::CardsMask opp_hole = cards::draw_random_cards(rng, used_cards, 2);
+    // If someone folded (pot_size == 0), the opponent folded
+    // After perspective swap in apply_action, "self" is now the winner
+    if (s.pot_size == 0) {
+        return 1.f;  // We won because opponent folded
+    }
 
-    used_cards |= opp_hole;
-    cards::CardsMask full_board = cards::draw_random_cards(rng, used_cards, state::get_cards_left(s, 5)) | s.board_cards;
+    // Showdown — deal remaining board cards if needed
+    cards::CardsMask used_cards = s.hole_cards | s.opp_hole_cards | s.board_cards;
+    int cards_left = state::get_cards_left(s, 5);
+    cards::CardsMask full_board = s.board_cards;
+    if (cards_left > 0) {
+        full_board |= cards::draw_random_cards(rng, used_cards, cards_left);
+    }
 
-    return eval::evaluate_showdown(s.hole_cards, opp_hole, full_board);
+    float result = eval::evaluate_showdown(s.hole_cards, s.opp_hole_cards, full_board);
+    
+    // Convert win/loss/tie into chip EV
+    // result: 1.0 = we win, 0.0 = we lose, 0.5 = tie
+    float pot = static_cast<float>(s.pot_size);
+    if (result == 1.f) return pot;       // we win the pot
+    if (result == 0.f) return -pot;      // we lose
+    return 0.f;                          // tie
 }   
 
 }; // namespace mccfr

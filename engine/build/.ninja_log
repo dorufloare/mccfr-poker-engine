@@ -1,14 +1,12 @@
 # ninja log v5
-33	533	1770992900417075600	CMakeFiles/poker_engine.dir/src/info_set.cpp.o	1b9f042220085a58
-25	963	1770992900846932800	CMakeFiles/poker_engine.dir/src/bots/dumb_bot.cpp.o	48c33e884f406ab7
-30	1041	1770992900929518700	CMakeFiles/poker_engine.dir/src/evalutaion.cpp.o	f6c80977e976e95
-39	801	1770992997003778400	CMakeFiles/poker_engine.dir/src/decision_state.cpp.o	103c9fb1b9bd979
-24	1107	1770992900996205300	CMakeFiles/poker_engine.dir/io/binary_stdio.cpp.o	55579fab2bacbcc8
-28	1128	1770992901011792400	CMakeFiles/poker_engine.dir/src/engine.cpp.o	d519ead2644cf709
-41	1022	1770992997225850500	CMakeFiles/poker_engine.dir/src/main.cpp.o	ff166313aeade567
-42	1315	1770992997520400000	CMakeFiles/poker_engine.dir/src/mccfr.cpp.o	9e4d026ee7258002
-1318	1586	1770992997792750100	poker_engine	54b6559de91f0eff
-37	996	1770993266599546200	CMakeFiles/poker_engine.dir/src/decision_state.cpp.o	103c9fb1b9bd979
-41	1192	1770993266797448900	CMakeFiles/poker_engine.dir/src/main.cpp.o	ff166313aeade567
-43	1555	1770993267160584000	CMakeFiles/poker_engine.dir/src/mccfr.cpp.o	9e4d026ee7258002
-1560	2169	1770993267779519600	poker_engine	54b6559de91f0eff
+47	540	1772392002007704700	CMakeFiles/poker_engine.dir/src/info_set.cpp.o	1b9f042220085a58
+46	918	1771866222517062000	CMakeFiles/poker_engine.dir/src/bots/dumb_bot.cpp.o	48c33e884f406ab7
+51	1009	1771866222612259900	CMakeFiles/poker_engine.dir/src/evalutaion.cpp.o	f6c80977e976e95
+46	751	1772392002219096600	CMakeFiles/poker_engine.dir/src/decision_state.cpp.o	103c9fb1b9bd979
+44	1110	1771866222713792200	CMakeFiles/poker_engine.dir/io/binary_stdio.cpp.o	55579fab2bacbcc8
+49	1125	1771866222714792700	CMakeFiles/poker_engine.dir/src/engine.cpp.o	d519ead2644cf709
+49	886	1772392002355368200	CMakeFiles/poker_engine.dir/src/main.cpp.o	ff166313aeade567
+50	1152	1772392002620886800	CMakeFiles/poker_engine.dir/src/mccfr.cpp.o	9e4d026ee7258002
+1155	1434	1772392002905043400	poker_engine	54b6559de91f0eff
+29	720	1772392119079661100	CMakeFiles/poker_engine.dir/src/main.cpp.o	ff166313aeade567
+723	930	1772392119310142300	poker_engine	54b6559de91f0eff

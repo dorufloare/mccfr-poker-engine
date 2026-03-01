@@ -27,6 +27,7 @@ struct DecisionState {
     action::ActionsMask action_mask;
 
     cards::CardsMask hole_cards;
+    cards::CardsMask opp_hole_cards;
     cards::CardsMask board_cards;
 
     Chips pot_size;

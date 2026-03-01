@@ -53,43 +53,44 @@ int main() {
     using namespace eval;
     using namespace mccfr;
 
-    uint32_t rng = 12345; // fixed seed for reproducibility
+    uint32_t rng = 43124; // fixed seed for reproducibility
 
-    // 1️⃣ Create a simple test hand
-    DecisionState s;
-    s.hand_id      = 1;
-    s.street       = Street::PREFLOP;
-    s.position     = Position::OUT_OF_POSITION;
-    s.pot_size     = 2;
-    s.stack_self   = 10;
-    s.stack_opp    = 10;
-    s.to_call      = 0;    s.street_actions = 0; // No actions taken yet on preflop
-
-    // Draw hole cards (reduced deck for testing)
-    s.hole_cards = draw_random_cards(rng, 0, 2);
-    s.board_cards = 0;
-
-    std::cout << "Initial hand:\n";
-    std::cout << "Hole cards: " << cards::mask_to_string(s.hole_cards) << "\n";
-    // All actions allowed initially
-    s.action_mask = static_cast<ActionsMask>(action::ALL); // FOLD/CALL/RAISE
-
-    // 2️⃣ Create MCCFR object
+    // 1️⃣ Create MCCFR object (shared across all iterations)
     MCCFR mccfr;
 
-    // 3️⃣ Run a few iterations to let MCCFR update regrets
-    const int iterations = 10;  // Reduced for debugging
+    // 2️⃣ Run MCCFR iterations — each iteration samples new hole cards for both players
+    const int iterations = 10000;
     for (int i = 0; i < iterations; ++i) {
-        std::cout << "Starting iteration " << i << std::endl;
-        float util = mccfr.traverse(s, 1.f, 1.f, rng);
-        std::cout << "Iteration " << i << " completed, utility: " << util << std::endl;
+        DecisionState s;
+        s.hand_id      = 1;
+        s.street       = Street::PREFLOP;
+        s.position     = Position::OUT_OF_POSITION;
+        s.pot_size     = 2;     
+        s.stack_self   = 10;
+        s.stack_opp    = 10;
+        s.to_call      = 0;
+        s.street_actions = 0;
+
+        // Draw hole cards for BOTH players
+        s.hole_cards     = draw_random_cards(rng, 0, 2, 7);
+        s.opp_hole_cards = draw_random_cards(rng, s.hole_cards, 2, 7);
+        s.board_cards    = 0;
+
+        // Preflop with no bet to call: check or raise (no fold)
+        s.action_mask = action::CALL_MASK | action::RAISE_MASK;
+
+        mccfr.traverse(s, 1.f, 1.f, rng);
+
+        if ((i + 1) % 2000 == 0) {
+            std::cout << "Completed " << (i + 1) << " / " << iterations << " iterations\n";
+        }
     }
 
-    // 4️⃣ Print learned strategies
-    std::cout << "\nLearned strategies at infosets:\n";
+    // 3️⃣ Print learned AVERAGE strategies (converged Nash approx)
+    std::cout << "\nLearned average strategies at infosets:\n";
     for (auto& [key, I] : mccfr.get_infosets()) {
         float strat[3];
-        I.get_strategy(strat, 1.f);
+        I.get_average_strategy(strat);
         std::cout << "Infoset key: " << infoset_key_to_string(key) << "\n";
         std::cout << "  FOLD: "  << strat[0] 
                   << ", CALL: " << strat[1] 

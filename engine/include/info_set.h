@@ -13,9 +13,9 @@ struct InfoSet {
 
     int num_actions() const { return regret_sum.size(); }
 
-    void get_strategy(float* out, float reach_prob) const;
+    void get_current_strategy(float* out) const;
+    void get_average_strategy(float* out) const;
+    void accumulate_strategy(const float* strategy, float reach_prob);
 };
-
-
 
 }
