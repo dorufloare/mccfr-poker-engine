@@ -11,6 +11,7 @@ struct InfoSetKey {
     uint8_t street;
     uint8_t position;
     uint8_t street_actions;
+    uint8_t to_call;
 
     bool operator==(const InfoSetKey& other) const;
 };

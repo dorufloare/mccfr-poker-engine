@@ -77,11 +77,18 @@ float MCCFR::traverse(const state::DecisionState& state, float reach_self, float
         size_t seed = 0;
         cards::CardsMask combined = k.hole | k.board;
         
+        auto call_chips_bucket = [](int to_call) {
+            if (to_call == 0) return 0;
+            if (to_call <= 3) return 1;
+            if (to_call <= 10) return 2;
+            return 3;
+        };
+
         hash_combine(seed, std::hash<uint64_t>{}(eval::highest_pair(combined)));
         hash_combine(seed, std::hash<uint64_t>{}(eval::highest_card(combined)));
         hash_combine(seed, std::hash<uint8_t>{}(k.street));
         hash_combine(seed, std::hash<uint8_t>{}(k.position));
-        //hash_combine(seed, std::hash<uint8_t>{}(k.street_actions));
+        hash_combine(seed, std::hash<uint8_t>{}(call_chips_bucket(k.to_call)));
 
         return seed;
     }
@@ -102,6 +109,7 @@ inline InfoSetKey make_key(const state::DecisionState& s) {
     key.street = static_cast<uint8_t>(s.street);
     key.position = static_cast<uint8_t>(s.position);
     key.street_actions = s.street_actions;
+    key.to_call = s.to_call;
     return key;
 }
 
@@ -110,7 +118,8 @@ std::string infoset_key_to_string(const InfoSetKey& key) {
            ", Board: " + cards::mask_to_string(key.board) +
            ", Street: " + std::to_string(static_cast<int>(key.street)) +
            ", Position: " + std::to_string(static_cast<int>(key.position)) +
-           ", Actions: " + std::to_string(static_cast<int>(key.street_actions));
+           ", Actions: " + std::to_string(static_cast<int>(key.street_actions)) +
+           ", To Call: " + std::to_string(static_cast<int>(key.to_call));
 }
 
 // Evaluates terminal value using both players' known hole cards

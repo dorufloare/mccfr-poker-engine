@@ -33,15 +33,28 @@ DecisionState apply_action(const DecisionState& state, action::ActionType action
         next.to_call = 0; 
     }
 
-    // TODO: raise logic
-    if (action == action::ActionType::RAISE) {
-        Chips raise_amount = 1;
+    if (action == action::ActionType::BET_SMALL) {
+        Chips call_part = std::min(state.to_call, next.stack_self);
+        Chips remaining = next.stack_self - call_part;
+        Chips raise_part = static_cast<Chips>(std::max(2, state.pot_size / 2));
+        raise_part = std::min(raise_part, remaining);
 
-        raise_amount = std::min(raise_amount, next.stack_self);
-        next.stack_self -= raise_amount;
-        next.pot_size += raise_amount;
-        
-        next.to_call = raise_amount;
+        Chips total = call_part + raise_part;
+        next.stack_self -= total;
+        next.pot_size += total;
+        next.to_call = raise_part;
+    }
+
+    if (action == action::ActionType::BET_BIG) {
+        Chips call_part = std::min(state.to_call, next.stack_self);
+        Chips remaining = next.stack_self - call_part;
+        Chips raise_part = static_cast<Chips>(std::max(5, static_cast<int>(state.pot_size)));
+        raise_part = std::min(raise_part, remaining);
+
+        Chips total = call_part + raise_part;
+        next.stack_self -= total;
+        next.pot_size += total;
+        next.to_call = raise_part;
     }
 
     // Increment action count on current street
@@ -68,8 +81,16 @@ DecisionState apply_action(const DecisionState& state, action::ActionType action
         ? Position::OUT_OF_POSITION 
         : Position::IN_POSITION;
 
-    if (!is_terminal_node(next)) next.action_mask = action::ALL;
-    else next.action_mask = action::NONE;
+    if (!is_terminal_node(next)) {
+        action::ActionsMask mask = action::CALL_MASK;
+        if (next.to_call > 0)
+            mask |= action::FOLD_MASK;
+        if (next.stack_self > next.to_call)
+            mask |= action::BET_SMALL_MASK | action::BET_BIG_MASK;
+        next.action_mask = mask;
+    } else {
+        next.action_mask = action::NONE;
+    }
 
     return next;
 }

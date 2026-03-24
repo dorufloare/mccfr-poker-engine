@@ -57,10 +57,11 @@ inline CardsMask combine_masks(std::initializer_list<CardsMask> masks) noexcept 
 }
 
 inline CardsMask draw_random_card(uint32_t& rng, uint64_t used_mask, int num_ranks = 13, int num_suits = 4) {
+    int total = num_ranks * num_suits;
     for (;;) {
-        uint8_t rank = random_utils::fast_rand(rng) % num_ranks;
-        uint8_t suit = random_utils::fast_rand(rng) % num_suits;
-        CardsMask card = 1ull << (suit * num_ranks + rank);
+        uint32_t r = random_utils::fast_rand(rng);
+        int idx = static_cast<int>((r >> 8) % total);  // use upper bits, less biased
+        CardsMask card = 1ull << idx;
         if ((card & used_mask) == 0)
             return card;
     }

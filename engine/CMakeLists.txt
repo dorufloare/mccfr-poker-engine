@@ -29,5 +29,22 @@ file(GLOB ENGINE_SOURCES
     io/*.cpp
 )
 
-# --- Create executable ---
+# --- Main executable ---
 add_executable(poker_engine ${ENGINE_SOURCES})
+
+# --- Test executable (all engine sources except main.cpp) ---
+file(GLOB TEST_ENGINE_SOURCES
+    src/*.cpp
+    src/bots/*.cpp
+    io/*.cpp
+)
+list(FILTER TEST_ENGINE_SOURCES EXCLUDE REGEX ".*main\\.cpp$")
+
+add_executable(poker_tests
+    tests/test_evaluation.cpp
+    ${TEST_ENGINE_SOURCES}
+)
+target_include_directories(poker_tests PRIVATE
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/io
+)
