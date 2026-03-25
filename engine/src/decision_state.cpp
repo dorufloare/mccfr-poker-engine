@@ -6,13 +6,12 @@ namespace state {
 
 DecisionState apply_action(const DecisionState& state, action::ActionType action) {
     DecisionState next = state;
+    next.folded = false;
 
     if (action == action::ActionType::FOLD) {
-        // Current player folds - opponent wins the pot
-        next.stack_self = 0;    
-        next.stack_opp += next.pot_size;
-        next.pot_size = 0;
-        next.action_mask = 0;
+        // Current player folds; keep pot_size for terminal payoff scaling.
+        next.folded = true;
+        next.action_mask = action::NONE;
         next.to_call = 0;
         
         // Swap perspectives so "self" becomes the winner (opponent)
@@ -30,7 +29,8 @@ DecisionState apply_action(const DecisionState& state, action::ActionType action
         next.stack_self -= call_amount;
         next.pot_size += call_amount;
 
-        next.to_call = 0; 
+        // Keep any unmatched amount pending if caller is short all-in.
+        next.to_call = static_cast<Chips>(state.to_call - call_amount);
     }
 
     if (action == action::ActionType::BET_SMALL) {
@@ -38,6 +38,7 @@ DecisionState apply_action(const DecisionState& state, action::ActionType action
         Chips remaining = next.stack_self - call_part;
         Chips raise_part = static_cast<Chips>(std::max(2, state.pot_size / 2));
         raise_part = std::min(raise_part, remaining);
+        raise_part = std::min(raise_part, state.stack_opp);
 
         Chips total = call_part + raise_part;
         next.stack_self -= total;
@@ -50,6 +51,7 @@ DecisionState apply_action(const DecisionState& state, action::ActionType action
         Chips remaining = next.stack_self - call_part;
         Chips raise_part = static_cast<Chips>(std::max(5, static_cast<int>(state.pot_size)));
         raise_part = std::min(raise_part, remaining);
+        raise_part = std::min(raise_part, state.stack_opp);
 
         Chips total = call_part + raise_part;
         next.stack_self -= total;
@@ -61,12 +63,15 @@ DecisionState apply_action(const DecisionState& state, action::ActionType action
     next.street_actions++;
 
     if (next.to_call == 0) {
-        // Both players called/checked - advance street
-        if (next.street != Street::RIVER) {
-            next.street = static_cast<Street>(static_cast<uint8_t>(next.street) + 1);
-            next.street_actions = 0; 
-        } else {
-            // Stay on river for showdown
+        // Betting round closes after both players acted without a pending call.
+        const bool close_round = next.street_actions >= 2;
+        if (close_round) {
+            if (next.street != Street::RIVER) {
+                next.street = static_cast<Street>(static_cast<uint8_t>(next.street) + 1);
+                next.street_actions = 0;
+            } else {
+                // Stay on river for showdown.
+            }
         }
     } else {
         // Someone raised - reset action count as we need both players to act again
@@ -74,7 +79,6 @@ DecisionState apply_action(const DecisionState& state, action::ActionType action
     }
 
     // Swap perspectives: after any action, it's the opponent's turn
-    // This keeps state consistent with MCCFR traversal which swaps reach probabilities
     std::swap(next.stack_self, next.stack_opp);
     std::swap(next.hole_cards, next.opp_hole_cards);
     next.position = (next.position == Position::IN_POSITION) 
@@ -85,7 +89,7 @@ DecisionState apply_action(const DecisionState& state, action::ActionType action
         action::ActionsMask mask = action::CALL_MASK;
         if (next.to_call > 0)
             mask |= action::FOLD_MASK;
-        if (next.stack_self > next.to_call)
+        if (next.stack_self > next.to_call && next.stack_opp > 0)
             mask |= action::BET_SMALL_MASK | action::BET_BIG_MASK;
         next.action_mask = mask;
     } else {
@@ -112,14 +116,21 @@ bool is_chance_node(const DecisionState& state) noexcept {
 }
 
 bool is_terminal_node(const DecisionState& state) noexcept {
-    if (state.stack_self == 0 || state.stack_opp == 0) return true; // all-in 
+    if (state.folded) return true;
+
+    // Pending call/fold decision always keeps the game non-terminal.
+    if (state.to_call > 0) return false;
+
+    // All-in with no pending call is terminal; board runout happens in terminal eval.
+    if (state.stack_self == 0 || state.stack_opp == 0) return true;
+
     // On river with no bet to call: only terminal if both players have acted (street_actions >= 2)
     if (get_cards_left(state) == 0 && state.to_call == 0 && state.street_actions >= 2) return true; // showdown
     return false;
 }
 
 DecisionState deal_cards(DecisionState state, uint32_t& rng) {
-    cards::CardsMask used = state.hole_cards | state.board_cards;
+    cards::CardsMask used = state.hole_cards | state.opp_hole_cards | state.board_cards;
 
     if (state.street == Street::FLOP)
         state.board_cards |= cards::draw_random_cards(rng, used, 3);
@@ -127,7 +138,7 @@ DecisionState deal_cards(DecisionState state, uint32_t& rng) {
         state.board_cards |= cards::draw_random_cards(rng, used, 1);
     else if (state.street == Street::RIVER)
         state.board_cards |= cards::draw_random_cards(rng, used, 1);
-
+ 
     return state;
 }
 

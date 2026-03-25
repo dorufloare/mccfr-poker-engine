@@ -24,6 +24,7 @@ struct DecisionState {
 
     Street  street;
     Position position;
+    
     action::ActionsMask action_mask;
 
     cards::CardsMask hole_cards;
@@ -36,6 +37,7 @@ struct DecisionState {
     Chips stack_opp;
     
     uint8_t street_actions; // Number of actions taken on current street
+    bool folded = false;
 };
 
 int get_cards_left(const DecisionState& state, const int tableSize = 5) noexcept;

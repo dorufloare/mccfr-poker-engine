@@ -51,7 +51,7 @@ int main() {
 
     // ── Train ───────────────────────────────────────────────────────────
     MCCFR solver;
-    const int iterations = 500000;
+    const int iterations = 10000;
 
     std::cout << "Training MCCFR (" << iterations << " iterations)...\n";
     for (int i = 0; i < iterations; ++i) {
@@ -73,7 +73,7 @@ int main() {
 
         solver.traverse(s, 1.f, 1.f, rng);
 
-        if ((i + 1) % 10000 == 0)
+        if ((i + 1) % 100 == 0)
             std::cout << "  " << (i + 1) << " / " << iterations << "\n";
     }
 
@@ -83,8 +83,7 @@ int main() {
     std::cout << "========== EXAMPLE LOOKUPS ==========\n\n";
 
     // Note: to_call=3 is bucket 1 (1-3), to_call=7 is bucket 2 (4-10).
-    // Position is not part of the hash, so OOP/IP share the same infoset.
-    // Preflop: training starts with to_call=3, so use to_call=3 for initial preflop nodes.
+    // Preflop training starts with to_call=3.
 
     // ── Preflop ─────────────────────────────────────────────────────────
     CardsMask aces = card_to_mask(Rank::ACE, Suit::HEARTS)

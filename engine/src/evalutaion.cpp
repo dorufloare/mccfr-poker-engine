@@ -149,7 +149,108 @@ static uint32_t eval_hand(cards::CardsMask hand) noexcept {
     return HIGH_CARD | top5(rank_or);
 }
 
-// ── Public API ───────────────────────────────────────────────────────────
+inline bool has_open_ended_straight_draw(cards::CardsMask hand) noexcept {
+    uint16_t rank_or = 0;
+    for (int s = 0; s < 4; ++s)
+        rank_or |= (uint16_t)((hand >> (s * 13)) & 0x1FFF);
+
+    for (int top = 12; top >= 5; --top)
+        if (((rank_or >> (top - 5)) & 0x3F) == 0x3E) return true;
+    if ((rank_or & 0x180F) == 0x180E) return true; // A-2-3-4 open-ended
+
+    return false;
+}
+
+inline bool has_gunshot_straight_draw(cards::CardsMask hand) noexcept {
+    uint16_t rank_or = 0;
+    for (int s = 0; s < 4; ++s)
+        rank_or |= (uint16_t)((hand >> (s * 13)) & 0x1FFF);
+
+    for (int top = 12; top >= 5; --top)
+        if (((rank_or >> (top - 5)) & 0x3F) == 0x3D) return true;
+    if ((rank_or & 0x180F) == 0x180B) return true; // A-2-3-5 gutshot
+
+    return false;
+
+} 
+
+inline bool has_flush_draw(cards::CardsMask hand) noexcept {
+    for (int s = 0; s < 4; ++s)
+        if (std::popcount((unsigned)((hand >> (s * 13)) & 0x1FFF)) == 4) return true;
+    return false;
+}
+
+//  Public API 
+float evaluate_hand_EHS(const state::DecisionState& state, uint32_t& rng, int num_simulations) {
+    if (num_simulations <= 0) return 0.5f;
+
+    int ahead_now = 0;
+    int tied_now = 0;
+    int behind_now = 0;
+
+    float np_num = 0.0f; // A->B + 0.5*A->T + 0.5*T->B
+    float pp_num = 0.0f; // B->A + 0.5*B->T + 0.5*T->A
+
+    const cards::CardsMask known = state.hole_cards | state.board_cards;
+
+    for (int i = 0; i < num_simulations; ++i) {
+        cards::CardsMask used = known;
+
+        cards::CardsMask opp = cards::draw_random_card(rng, used);
+        used |= opp;
+        opp |= cards::draw_random_card(rng, used);
+        used |= opp;
+
+        cards::CardsMask board_full = state.board_cards;
+        for (int j = cards::cardsInMask(board_full); j < 5; ++j) {
+            cards::CardsMask c = cards::draw_random_card(rng, used);
+            board_full |= c;
+            used |= c;
+        }
+
+        const float r_now = evaluate_showdown(state.hole_cards, opp, state.board_cards);
+        const float r_full = evaluate_showdown(state.hole_cards, opp, board_full);
+
+        if (r_now == 1.0f) {
+            ++ahead_now;
+            if (r_full == 0.0f) np_num += 1.0f;      // A->B
+            else if (r_full == 0.5f) np_num += 0.5f; // A->T
+        } else if (r_now == 0.5f) {
+            ++tied_now;
+            if (r_full == 0.0f) np_num += 0.5f;      // T->B
+            else if (r_full == 1.0f) pp_num += 0.5f; // T->A
+        } else {
+            ++behind_now;
+            if (r_full == 1.0f) pp_num += 1.0f;      // B->A
+            else if (r_full == 0.5f) pp_num += 0.5f; // B->T
+        }
+    }
+
+    const float N = static_cast<float>(num_simulations);
+    const float HS = (ahead_now + 0.5f * tied_now) / N;
+
+    //ties count as half ahead and half behind for the purposes of NP/PP calculation
+    const float np_den = ahead_now + 0.5f * tied_now;
+    const float pp_den = behind_now + 0.5f * tied_now;
+
+    //probability of your hand getting worse, given that you are not behind currently
+    const float NP = (np_den > 0.0f) ? (np_num / np_den) : 0.0f;
+
+    //probability of your hand improving, given that you are not ahead currently
+    const float PP = (pp_den > 0.0f) ? (pp_num / pp_den) : 0.0f;
+
+    return HS * (1.0f - NP) + (1.0f - HS) * PP;
+}
+
+uint8_t get_straight_draw(cards::CardsMask hand) noexcept {
+   if (has_open_ended_straight_draw(hand)) return 1;
+   if (has_gunshot_straight_draw(hand)) return 1;
+   return 0;
+}
+
+uint8_t get_flush_draw(cards::CardsMask hand) noexcept {
+    return has_flush_draw(hand) ? 1 : 0;
+}
 
 int highest_pair(cards::CardsMask mask) noexcept {
     for (int r = cards::RANKS - 1; r >= 0; --r) {

@@ -1,16 +1,8 @@
 #include "mccfr.h"
-#include "cards.h"
 #include "evaluation.h"
-#include "utils.h"
 #include "decision_state.h"
-#include <iostream>
 
 namespace mccfr {
-
-bool InfoSetKey::operator==(const InfoSetKey& other) const {
-    InfoSetKeyHash hasher;
-    return hasher(*this) == hasher(other);
-}
 
 float MCCFR::traverse(const state::DecisionState& state, float reach_self, float reach_opp, uint32_t& rng) {
     if (state::is_terminal_node(state)) {
@@ -73,26 +65,6 @@ float MCCFR::traverse(const state::DecisionState& state, float reach_self, float
     return node_value;
 }
 
- size_t InfoSetKeyHash::operator()(const InfoSetKey& k) const noexcept {
-        size_t seed = 0;
-        cards::CardsMask combined = k.hole | k.board;
-        
-        auto call_chips_bucket = [](int to_call) {
-            if (to_call == 0) return 0;
-            if (to_call <= 3) return 1;
-            if (to_call <= 10) return 2;
-            return 3;
-        };
-
-        hash_combine(seed, std::hash<uint64_t>{}(eval::highest_pair(combined)));
-        hash_combine(seed, std::hash<uint64_t>{}(eval::highest_card(combined)));
-        hash_combine(seed, std::hash<uint8_t>{}(k.street));
-        hash_combine(seed, std::hash<uint8_t>{}(k.position));
-        hash_combine(seed, std::hash<uint8_t>{}(call_chips_bucket(k.to_call)));
-
-        return seed;
-    }
-
 InfoSet& MCCFR::get_infoset(const state::DecisionState& state) {
     InfoSetKey key = make_key(state);
     auto it = infosets.find(key);
@@ -102,35 +74,16 @@ InfoSet& MCCFR::get_infoset(const state::DecisionState& state) {
     return it->second;
 }
 
-inline InfoSetKey make_key(const state::DecisionState& s) {
-    InfoSetKey key;
-    key.hole = s.hole_cards;
-    key.board = s.board_cards;
-    key.street = static_cast<uint8_t>(s.street);
-    key.position = static_cast<uint8_t>(s.position);
-    key.street_actions = s.street_actions;
-    key.to_call = s.to_call;
-    return key;
-}
-
-std::string infoset_key_to_string(const InfoSetKey& key) {
-    return "Hole: " + cards::mask_to_string(key.hole) +
-           ", Board: " + cards::mask_to_string(key.board) +
-           ", Street: " + std::to_string(static_cast<int>(key.street)) +
-           ", Position: " + std::to_string(static_cast<int>(key.position)) +
-           ", Actions: " + std::to_string(static_cast<int>(key.street_actions)) +
-           ", To Call: " + std::to_string(static_cast<int>(key.to_call));
-}
-
 // Evaluates terminal value using both players' known hole cards
 inline float get_terminal_evaluation_from_state(const state::DecisionState& s, uint32_t& rng) {
-    // If someone folded (pot_size == 0), the opponent folded
-    // After perspective swap in apply_action, "self" is now the winner
-    if (s.pot_size == 0) {
-        return 1.f;  // We won because opponent folded
+    // Fold terminal: after perspective swap in apply_action, "self" is winner.
+    if (s.folded) {
+        const float final_self = static_cast<float>(s.stack_self + s.pot_size);
+        const float final_opp = static_cast<float>(s.stack_opp);
+        return 0.5f * (final_self - final_opp);
     }
 
-    // Showdown — deal remaining board cards if needed
+    // Showdown - deal remaining board cards if needed
     cards::CardsMask used_cards = s.hole_cards | s.opp_hole_cards | s.board_cards;
     int cards_left = state::get_cards_left(s, 5);
     cards::CardsMask full_board = s.board_cards;
@@ -139,13 +92,21 @@ inline float get_terminal_evaluation_from_state(const state::DecisionState& s, u
     }
 
     float result = eval::evaluate_showdown(s.hole_cards, s.opp_hole_cards, full_board);
-    
-    // Convert win/loss/tie into chip EV
-    // result: 1.0 = we win, 0.0 = we lose, 0.5 = tie
-    float pot = static_cast<float>(s.pot_size);
-    if (result == 1.f) return pot;       // we win the pot
-    if (result == 0.f) return -pot;      // we lose
-    return 0.f;                          // tie
+
+    const float pot = static_cast<float>(s.pot_size);
+    float final_self = static_cast<float>(s.stack_self);
+    float final_opp = static_cast<float>(s.stack_opp);
+
+    if (result == 1.f) {
+        final_self += pot;
+    } else if (result == 0.f) {
+        final_opp += pot;
+    } else {
+        final_self += 0.5f * pot;
+        final_opp += 0.5f * pot;
+    }
+
+    return 0.5f * (final_self - final_opp);
 }   
 
 }; // namespace mccfr
