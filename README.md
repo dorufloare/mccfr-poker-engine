@@ -4,6 +4,18 @@ I am not saving training data to disk yet on purpose. Right now I am trying to f
 
 The biggest challenge in this project is hand bucketing. I am using EHS buckets and a few extra features to keep the state space manageable, but every bucket decision changes both training speed and strategy quality. Until those choices feel stable, I prefer fast iteration over persistence.
 
+## About the engine
+
+MCCFR (Monte Carlo Counterfactual Regret Minimization) is the training method used here.
+
+Very roughly, each training iteration does this:
+1. Simulate one hand path through the game tree.
+2. At every decision, compare the chosen action's outcome with the outcomes of other legal actions.
+3. Increase regret for actions that would have done better.
+4. Update strategy to favor actions with lower cumulative regret over time.
+
+After enough iterations, the average strategy in each infoset becomes less exploitable and more stable.
+
 ## What this project does
 
 This is a C++ toy poker engine with MCCFR training, hand evaluation, and lookup examples.
