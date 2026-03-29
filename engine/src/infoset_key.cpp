@@ -1,16 +1,12 @@
 #include "infoset_key.h"
 #include "cards.h"
 #include "evaluation.h"
+#include "training_config.h"
 #include "utils.h"
 #include <algorithm>
 #include <functional>
 
 namespace mccfr {
-
-const int EHS_SIMS_PREFLOP = 32;
-const int EHS_SIMS_FLOP = 32;
-const int EHS_SIMS_TURN = 48;
-const int EHS_SIMS_RIVER = 48;
 
 namespace {
 
@@ -34,13 +30,13 @@ inline int8_t ehs_bucket(const InfoSetKey& k) {
     s.board_cards = k.board;
     uint32_t rng = deterministic_seed(k);
     
-    int ehs_sims = EHS_SIMS_PREFLOP;
+    int ehs_sims = training_config::kEhsSimsPreflop;
     if (k.street == static_cast<uint8_t>(state::Street::FLOP))
-        ehs_sims = EHS_SIMS_FLOP;
+        ehs_sims = training_config::kEhsSimsFlop;
     else if (k.street == static_cast<uint8_t>(state::Street::TURN))
-        ehs_sims = EHS_SIMS_TURN;
+        ehs_sims = training_config::kEhsSimsTurn;
     else if (k.street == static_cast<uint8_t>(state::Street::RIVER))
-        ehs_sims = EHS_SIMS_RIVER;
+        ehs_sims = training_config::kEhsSimsRiver;
 
     const float ehs = std::clamp(eval::evaluate_hand_EHS(s, rng, ehs_sims), 0.0f, 1.0f);
     k.cached_ehs_bucket = static_cast<int8_t>(std::min(9, static_cast<int>(ehs * 10.0f)));

@@ -41,6 +41,7 @@
 *.app
 
 # Build directories
+engine/build/
 build/
 Build/
 build-*/

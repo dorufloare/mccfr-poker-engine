@@ -1,226 +1,68 @@
 #include <iostream>
 #include <cstdint>
+#include <cstdlib>
+#include <ctime>
 #include "decision_state.h"
 #include "cards.h"
 #include "mccfr.h"
 #include "action.h"
-#include "info_set.h"
 #include "utils.h"
-#include "evaluation.h"
 #include "optimal_ehs_iterations.h"
-
-using namespace state;
-using namespace cards;
-using namespace action;
-using namespace mccfr;
-
-void print_strategy(const char* label, MCCFR& solver, const InfoSetKey& key) {
-    auto& infosets = solver.get_infosets();
-    auto it = infosets.find(key);
-    std::cout << label << "  [" << infoset_key_to_string(key) << "]\n";
-    if (it == infosets.end()) {
-        std::cout << "  (not visited during training)\n\n";
-        return;
-    }
-    std::cout << "  visits: " << it->second.visit_count << "\n";
-    float strat[action::ACTIONS];
-    it->second.get_average_strategy(strat);
-    std::cout << " ";
-    for (int i = 0; i < action::ACTIONS; ++i) {
-        if (i > 0) std::cout << ",";
-        const char* names[] = {"FOLD", "CALL", "BET_SMALL", "BET_BIG"};
-        std::cout << " " << names[i] << ": " << strat[i] << '\n';
-    }
-    std::cout << "\n\n";
-}
-
-InfoSetKey make_test_key(CardsMask hole, CardsMask board,
-                         Street street, Position pos, uint8_t actions,
-                         uint8_t to_call = 0) {
-    InfoSetKey k;
-    k.hole = hole;
-    k.board = board;
-    k.street = static_cast<uint8_t>(street);
-    k.position = static_cast<uint8_t>(pos);
-    k.street_actions = actions;
-    k.to_call = to_call;
-    return k;
-}
-
-void print_example_lookups(MCCFR& solver) {
-    // ── Test hands ──────────────────────────────────────────────────────
-    std::cout << "========== EXAMPLE LOOKUPS ==========\n\n";
-
-    // Note: to_call=3 is bucket 1 (1-3), to_call=7 is bucket 2 (4-10).
-    // Preflop training starts with to_call=3.
-
-    // ── Preflop ─────────────────────────────────────────────────────────
-    CardsMask aces = card_to_mask(Rank::ACE, Suit::HEARTS)
-                   | card_to_mask(Rank::ACE, Suit::SPADES);
-    print_strategy("AA preflop, first action (to_call=3)",
-        solver, make_test_key(aces, 0, Street::PREFLOP, Position::OUT_OF_POSITION, 0, 3));
-    print_strategy("AA preflop, facing re-raise (to_call=7)",
-        solver, make_test_key(aces, 0, Street::PREFLOP, Position::OUT_OF_POSITION, 1, 7));
-
-    CardsMask kings = card_to_mask(Rank::KING, Suit::HEARTS)
-                    | card_to_mask(Rank::KING, Suit::SPADES);
-    print_strategy("KK preflop, first action (to_call=3)",
-        solver, make_test_key(kings, 0, Street::PREFLOP, Position::OUT_OF_POSITION, 0, 3));
-
-    CardsMask seven_two = card_to_mask(Rank::SEVEN, Suit::HEARTS)
-                        | card_to_mask(Rank::TWO, Suit::SPADES);
-    print_strategy("72o preflop, first action (to_call=3)",
-        solver, make_test_key(seven_two, 0, Street::PREFLOP, Position::OUT_OF_POSITION, 0, 3));
-    print_strategy("72o preflop, facing raise (to_call=7)",
-        solver, make_test_key(seven_two, 0, Street::PREFLOP, Position::OUT_OF_POSITION, 1, 7));
-
-    // ── Flop ─────────────────────────────────────────────────────────────
-    // KQs: top pair top kicker on K-8-3
-    CardsMask kqs     = card_to_mask(Rank::KING,  Suit::HEARTS)
-                      | card_to_mask(Rank::QUEEN, Suit::HEARTS);
-    CardsMask k83     = card_to_mask(Rank::KING,   Suit::DIAMONDS)
-                      | card_to_mask(Rank::EIGHT,  Suit::CLUBS)
-                      | card_to_mask(Rank::THREE,  Suit::SPADES);
-    print_strategy("KQs on K-8-3, first to act (to_call=0)",
-        solver, make_test_key(kqs, k83, Street::FLOP, Position::OUT_OF_POSITION, 0, 0));
-    print_strategy("KQs on K-8-3, facing small bet (to_call=7)",
-        solver, make_test_key(kqs, k83, Street::FLOP, Position::IN_POSITION, 1, 7));
-
-    // JJ: overpair on A-9-4 (scary board)
-    CardsMask jacks   = card_to_mask(Rank::JACK, Suit::CLUBS)
-                      | card_to_mask(Rank::JACK, Suit::DIAMONDS);
-    CardsMask a94     = card_to_mask(Rank::ACE,  Suit::CLUBS)
-                      | card_to_mask(Rank::NINE, Suit::HEARTS)
-                      | card_to_mask(Rank::FOUR, Suit::SPADES);
-    print_strategy("JJ on A-9-4, first to act (to_call=0)",
-        solver, make_test_key(jacks, a94, Street::FLOP, Position::OUT_OF_POSITION, 0, 0));
-    print_strategy("JJ on A-9-4, facing bet (to_call=7)",
-        solver, make_test_key(jacks, a94, Street::FLOP, Position::IN_POSITION, 1, 7));
-    print_strategy("JJ on A-9-4, facing big bet (to_call=11)",
-        solver, make_test_key(jacks, a94, Street::FLOP, Position::IN_POSITION, 1, 11));
-
-    // 44: bottom set on 4-8-K
-    CardsMask fours   = card_to_mask(Rank::FOUR, Suit::CLUBS)
-                      | card_to_mask(Rank::FOUR, Suit::DIAMONDS);
-    CardsMask four_board = card_to_mask(Rank::FOUR,  Suit::HEARTS)
-                         | card_to_mask(Rank::EIGHT, Suit::SPADES)
-                         | card_to_mask(Rank::KING,  Suit::CLUBS);
-    print_strategy("44 flopped bottom set (4-8-K), first to act (to_call=0)",
-        solver, make_test_key(fours, four_board, Street::FLOP, Position::OUT_OF_POSITION, 0, 0));
-
-    // 96o: gutshot + backdoor on 7-8-2
-    CardsMask nine_six = card_to_mask(Rank::NINE, Suit::HEARTS)
-                       | card_to_mask(Rank::SIX,  Suit::SPADES);
-    CardsMask draw_board = card_to_mask(Rank::SEVEN, Suit::CLUBS)
-                         | card_to_mask(Rank::EIGHT, Suit::DIAMONDS)
-                         | card_to_mask(Rank::TWO,   Suit::HEARTS);
-    print_strategy("96o gutshot on 7-8-2, first to act (to_call=0)",
-        solver, make_test_key(nine_six, draw_board, Street::FLOP, Position::OUT_OF_POSITION, 0, 0));
-    print_strategy("96o gutshot on 7-8-2, facing bet (to_call=7)",
-        solver, make_test_key(nine_six, draw_board, Street::FLOP, Position::IN_POSITION, 1, 7));
-
-    // AhKh: made flush on monotone board
-    CardsMask ace_king_hearts = card_to_mask(Rank::ACE,  Suit::HEARTS)
-                              | card_to_mask(Rank::KING, Suit::HEARTS);
-    CardsMask monotone_hearts = card_to_mask(Rank::QUEEN, Suit::HEARTS)
-                              | card_to_mask(Rank::SEVEN, Suit::HEARTS)
-                              | card_to_mask(Rank::TWO,   Suit::HEARTS);
-    print_strategy("AhKh made flush on Qh-7h-2h, first to act (to_call=0)",
-        solver, make_test_key(ace_king_hearts, monotone_hearts, Street::FLOP, Position::OUT_OF_POSITION, 0, 0));
-
-    // AhKh: nut flush draw on two-heart board
-    CardsMask two_heart_board = card_to_mask(Rank::QUEEN, Suit::HEARTS)
-                              | card_to_mask(Rank::SEVEN, Suit::HEARTS)
-                              | card_to_mask(Rank::TWO,   Suit::CLUBS);
-    print_strategy("AhKh nut flush draw on Qh-7h-2c, facing bet (to_call=7)",
-        solver, make_test_key(ace_king_hearts, two_heart_board, Street::FLOP, Position::IN_POSITION, 1, 7));
-
-    // 98o: made straight on 7-6-5
-    CardsMask nine_eight = card_to_mask(Rank::NINE,  Suit::CLUBS)
-                         | card_to_mask(Rank::EIGHT, Suit::DIAMONDS);
-    CardsMask straight_board = card_to_mask(Rank::SEVEN, Suit::SPADES)
-                             | card_to_mask(Rank::SIX,   Suit::HEARTS)
-                             | card_to_mask(Rank::FIVE,  Suit::CLUBS);
-    print_strategy("98o flopped straight on 7-6-5, first to act (to_call=0)",
-        solver, make_test_key(nine_eight, straight_board, Street::FLOP, Position::OUT_OF_POSITION, 0, 0));
-
-    // 98o: open-ended straight draw on 7-6-2
-    CardsMask oesd_board = card_to_mask(Rank::SEVEN, Suit::SPADES)
-                         | card_to_mask(Rank::SIX,   Suit::HEARTS)
-                         | card_to_mask(Rank::TWO,   Suit::CLUBS);
-    print_strategy("98o open-ended straight draw on 7-6-2, facing bet (to_call=7)",
-        solver, make_test_key(nine_eight, oesd_board, Street::FLOP, Position::IN_POSITION, 1, 7));
-
-    // AKo: gutshot to Broadway on Q-J-2
-    CardsMask ace_king_off = card_to_mask(Rank::ACE,  Suit::CLUBS)
-                           | card_to_mask(Rank::KING, Suit::DIAMONDS);
-    CardsMask gutshot_board = card_to_mask(Rank::QUEEN, Suit::SPADES)
-                            | card_to_mask(Rank::JACK,  Suit::HEARTS)
-                            | card_to_mask(Rank::TWO,   Suit::DIAMONDS);
-    print_strategy("AKo gutshot (to T) on Q-J-2, first to act (to_call=0)",
-        solver, make_test_key(ace_king_off, gutshot_board, Street::FLOP, Position::OUT_OF_POSITION, 0, 0));
-
-    // ── River ────────────────────────────────────────────────────────────
-    // AA: aces full on A-K-Q-4-2
-    CardsMask river_aces  = card_to_mask(Rank::ACE, Suit::HEARTS)
-                          | card_to_mask(Rank::ACE, Suit::SPADES);
-    CardsMask river_board = card_to_mask(Rank::ACE,   Suit::CLUBS)
-                          | card_to_mask(Rank::KING,  Suit::DIAMONDS)
-                          | card_to_mask(Rank::QUEEN, Suit::HEARTS)
-                          | card_to_mask(Rank::FOUR,  Suit::SPADES)
-                          | card_to_mask(Rank::TWO,   Suit::CLUBS);
-    print_strategy("AA (set of aces) on A-K-Q-4-2 river, first to act (to_call=0)",
-        solver, make_test_key(river_aces, river_board, Street::RIVER, Position::OUT_OF_POSITION, 0, 0));
-    print_strategy("AA (set of aces) on A-K-Q-4-2 river, facing bet (to_call=7)",
-        solver, make_test_key(river_aces, river_board, Street::RIVER, Position::IN_POSITION, 1, 7));
-
-    // 23o: complete air on K-Q-J-9-7 river facing a big bet
-    CardsMask air       = card_to_mask(Rank::TWO,   Suit::CLUBS)
-                        | card_to_mask(Rank::THREE, Suit::DIAMONDS);
-    CardsMask scary_run = card_to_mask(Rank::KING,  Suit::HEARTS)
-                        | card_to_mask(Rank::QUEEN, Suit::CLUBS)
-                        | card_to_mask(Rank::JACK,  Suit::SPADES)
-                        | card_to_mask(Rank::NINE,  Suit::DIAMONDS)
-                        | card_to_mask(Rank::SEVEN, Suit::HEARTS);
-    print_strategy("23o (air) on K-Q-J-9-7 river, facing big bet (to_call=7)",
-        solver, make_test_key(air, scary_run, Street::RIVER, Position::IN_POSITION, 1, 7));
-}
+#include "example_lookups.h"
+#include "training_config.h"
 
 int main() {
-    srand(time(0));
+    std::srand(static_cast<unsigned>(std::time(nullptr)));
     uint32_t rng = random_utils::init_rng(static_cast<uint32_t>(rand()));
 
     //experiments::run_ehs_iterations_experiment();
 
-    // ── Train ───────────────────────────────────────────────────────────
-    MCCFR solver;
-    const int iterations = 3000;
+    mccfr::MCCFR solver;
 
-    std::cout << "Training MCCFR (" << iterations << " iterations)...\n";
-    for (int i = 0; i < iterations; ++i) {
-        DecisionState s;
-        s.hand_id        = 1;
-        s.street         = Street::PREFLOP;
-        s.position       = Position::OUT_OF_POSITION;
-        s.pot_size       = 9;
-        s.stack_self     = 50;
-        s.stack_opp      = 50;
-        s.to_call        = 3;
-        s.street_actions = 0;
+    std::cout << "Training MCCFR (" << training_config::kIterations << " iterations)...\n";
+    for (int i = 0; i < training_config::kIterations; ++i) {
+        state::DecisionState s{};
+        s.hand_id        = training_config::kInitialHandId;
+        s.street         = training_config::kInitialStreet;
+        s.position       = training_config::kInitialPosition;
+        s.pot_size       = training_config::kInitialPotSize;
+        s.stack_self     = training_config::kInitialStackSelf;
+        s.stack_opp      = training_config::kInitialStackOpp;
+        s.to_call        = training_config::kInitialToCall;
+        s.street_actions = training_config::kInitialStreetActions;
 
-        s.hole_cards     = draw_random_cards(rng, 0, 2);
-        s.opp_hole_cards = draw_random_cards(rng, s.hole_cards, 2);
-        s.board_cards    = 0;
+        s.hole_cards     = cards::draw_random_cards(rng, training_config::kEmptyCardsMask, training_config::kHeroHoleCardCount);
+        s.opp_hole_cards = cards::draw_random_cards(rng, s.hole_cards, training_config::kOppHoleCardCount);
+        s.board_cards    = training_config::kEmptyCardsMask;
 
-        s.action_mask = FOLD_MASK | CALL_MASK | BET_SMALL_MASK | BET_BIG_MASK;
+        s.action_mask = training_config::kInitialActionMask;
 
-        solver.traverse(s, 1.f, 1.f, rng);
+        solver.traverse(s, training_config::kTraverseReachSelf, training_config::kTraverseReachOpp, rng);
 
-        if ((i + 1) % 100 == 0)
-            std::cout << "  " << (i + 1) << " / " << iterations << "\n";
+        if ((i + 1) % training_config::kProgressPrintEvery == 0)
+            std::cout << "  " << (i + 1) << " / " << training_config::kIterations << "\n";
     }
 
     std::cout << "Training done. Infosets: " << solver.get_infosets().size() << "\n\n";
+
+    // Example: add your own custom lookup datapoint.
+    // auto custom_tests = make_default_test_configs();
+    // custom_tests.push_back({
+    //     "My custom flop spot",
+    //     cards::make_hole_cards({cards::Rank::ACE, cards::Suit::SPADES},
+    //                            {cards::Rank::QUEEN, cards::Suit::SPADES}),
+    //     cards::make_board_cards({
+    //         {cards::Rank::KING, cards::Suit::SPADES},
+    //         {cards::Rank::TEN, cards::Suit::CLUBS},
+    //         {cards::Rank::TWO, cards::Suit::DIAMONDS}
+    //     }),
+    //     42, 42,
+    //     state::Street::FLOP,
+    //     state::Position::IN_POSITION,
+    //     1,
+    //     6
+    // });
+    // print_example_lookups(solver, custom_tests);
 
     print_example_lookups(solver);
 
