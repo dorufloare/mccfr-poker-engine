@@ -49,6 +49,13 @@ cmake_ninja_workdir = /mnt/c/Users/doruf/info/poker/engine/build/
 
 build cmake_object_order_depends_target_poker_engine: phony || CMakeFiles/poker_engine.dir
 
+build CMakeFiles/poker_engine.dir/experiments/optimal_ehs_iterations.cpp.o: CXX_COMPILER__poker_engine_unscanned_Release /mnt/c/Users/doruf/info/poker/engine/experiments/optimal_ehs_iterations.cpp || cmake_object_order_depends_target_poker_engine
+  DEP_FILE = CMakeFiles/poker_engine.dir/experiments/optimal_ehs_iterations.cpp.o.d
+  FLAGS = -O3 -DNDEBUG -std=c++20 -O3 -march=native -Wall -Wextra -Wpedantic
+  INCLUDES = -I/mnt/c/Users/doruf/info/poker/engine/include -I/mnt/c/Users/doruf/info/poker/engine/io
+  OBJECT_DIR = CMakeFiles/poker_engine.dir
+  OBJECT_FILE_DIR = CMakeFiles/poker_engine.dir/experiments
+
 build CMakeFiles/poker_engine.dir/src/decision_state.cpp.o: CXX_COMPILER__poker_engine_unscanned_Release /mnt/c/Users/doruf/info/poker/engine/src/decision_state.cpp || cmake_object_order_depends_target_poker_engine
   DEP_FILE = CMakeFiles/poker_engine.dir/src/decision_state.cpp.o.d
   FLAGS = -O3 -DNDEBUG -std=c++20 -O3 -march=native -Wall -Wextra -Wpedantic
@@ -99,7 +106,7 @@ build CMakeFiles/poker_engine.dir/src/mccfr.cpp.o: CXX_COMPILER__poker_engine_un
 #############################################
 # Link the executable poker_engine
 
-build poker_engine: CXX_EXECUTABLE_LINKER__poker_engine_Release CMakeFiles/poker_engine.dir/src/decision_state.cpp.o CMakeFiles/poker_engine.dir/src/evalutaion.cpp.o CMakeFiles/poker_engine.dir/src/info_set.cpp.o CMakeFiles/poker_engine.dir/src/infoset_key.cpp.o CMakeFiles/poker_engine.dir/src/main.cpp.o CMakeFiles/poker_engine.dir/src/mccfr.cpp.o
+build poker_engine: CXX_EXECUTABLE_LINKER__poker_engine_Release CMakeFiles/poker_engine.dir/experiments/optimal_ehs_iterations.cpp.o CMakeFiles/poker_engine.dir/src/decision_state.cpp.o CMakeFiles/poker_engine.dir/src/evalutaion.cpp.o CMakeFiles/poker_engine.dir/src/info_set.cpp.o CMakeFiles/poker_engine.dir/src/infoset_key.cpp.o CMakeFiles/poker_engine.dir/src/main.cpp.o CMakeFiles/poker_engine.dir/src/mccfr.cpp.o
   FLAGS = -O3 -DNDEBUG
   OBJECT_DIR = CMakeFiles/poker_engine.dir
   POST_BUILD = :

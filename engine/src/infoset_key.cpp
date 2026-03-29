@@ -7,6 +7,11 @@
 
 namespace mccfr {
 
+const int EHS_SIMS_PREFLOP = 32;
+const int EHS_SIMS_FLOP = 32;
+const int EHS_SIMS_TURN = 48;
+const int EHS_SIMS_RIVER = 48;
+
 namespace {
 
 inline uint32_t deterministic_seed(const InfoSetKey& k) {
@@ -20,14 +25,26 @@ inline uint32_t deterministic_seed(const InfoSetKey& k) {
     return random_utils::init_rng(seed == 0 ? 1u : seed);
 }
 
-inline uint8_t ehs_bucket(const InfoSetKey& k) {
+inline int8_t ehs_bucket(const InfoSetKey& k) {
+    if (k.cached_ehs_bucket != -1) 
+        return k.cached_ehs_bucket;
+
     state::DecisionState s{};
     s.hole_cards = k.hole;
     s.board_cards = k.board;
     uint32_t rng = deterministic_seed(k);
-    constexpr int EHS_SIMS = 32;
-    const float ehs = std::clamp(eval::evaluate_hand_EHS(s, rng, EHS_SIMS), 0.0f, 1.0f);
-    return static_cast<uint8_t>(std::min(9, static_cast<int>(ehs * 10.0f)));
+    
+    int ehs_sims = EHS_SIMS_PREFLOP;
+    if (k.street == static_cast<uint8_t>(state::Street::FLOP))
+        ehs_sims = EHS_SIMS_FLOP;
+    else if (k.street == static_cast<uint8_t>(state::Street::TURN))
+        ehs_sims = EHS_SIMS_TURN;
+    else if (k.street == static_cast<uint8_t>(state::Street::RIVER))
+        ehs_sims = EHS_SIMS_RIVER;
+
+    const float ehs = std::clamp(eval::evaluate_hand_EHS(s, rng, ehs_sims), 0.0f, 1.0f);
+    k.cached_ehs_bucket = static_cast<int8_t>(std::min(9, static_cast<int>(ehs * 10.0f)));
+    return k.cached_ehs_bucket;
 }
 
 inline uint8_t straight_draw_type(const InfoSetKey& k) {
@@ -64,7 +81,7 @@ bool InfoSetKey::operator==(const InfoSetKey& other) const {
 size_t InfoSetKeyHash::operator()(const InfoSetKey& k) const noexcept {
     size_t seed = 0;
 
-    hash_combine(seed, std::hash<uint8_t>{}(ehs_bucket(k)));
+    hash_combine(seed, std::hash<int8_t>{}(ehs_bucket(k)));
     hash_combine(seed, std::hash<uint8_t>{}(straight_draw_type(k)));
     hash_combine(seed, std::hash<uint8_t>{}(flush_draw_type(k)));
     hash_combine(seed, std::hash<uint8_t>{}(k.street));

@@ -14,6 +14,8 @@ struct InfoSetKey {
     uint8_t street_actions;
     uint8_t to_call;
 
+    mutable int8_t cached_ehs_bucket = -1;
+
     bool operator==(const InfoSetKey& other) const;
 };
 

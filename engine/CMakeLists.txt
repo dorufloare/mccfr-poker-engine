@@ -27,6 +27,7 @@ file(GLOB ENGINE_SOURCES
     src/*.cpp
     src/bots/*.cpp
     io/*.cpp
+    experiments/*.cpp
 )
 
 # --- Main executable ---

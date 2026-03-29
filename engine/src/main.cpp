@@ -7,6 +7,7 @@
 #include "info_set.h"
 #include "utils.h"
 #include "evaluation.h"
+#include "optimal_ehs_iterations.h"
 
 using namespace state;
 using namespace cards;
@@ -21,6 +22,7 @@ void print_strategy(const char* label, MCCFR& solver, const InfoSetKey& key) {
         std::cout << "  (not visited during training)\n\n";
         return;
     }
+    std::cout << "  visits: " << it->second.visit_count << "\n";
     float strat[action::ACTIONS];
     it->second.get_average_strategy(strat);
     std::cout << " ";
@@ -45,40 +47,7 @@ InfoSetKey make_test_key(CardsMask hole, CardsMask board,
     return k;
 }
 
-int main() {
-    srand(time(0));
-    uint32_t rng = random_utils::init_rng(static_cast<uint32_t>(rand()));
-
-    // ── Train ───────────────────────────────────────────────────────────
-    MCCFR solver;
-    const int iterations = 10000;
-
-    std::cout << "Training MCCFR (" << iterations << " iterations)...\n";
-    for (int i = 0; i < iterations; ++i) {
-        DecisionState s;
-        s.hand_id        = 1;
-        s.street         = Street::PREFLOP;
-        s.position       = Position::OUT_OF_POSITION;
-        s.pot_size       = 9;
-        s.stack_self     = 50;
-        s.stack_opp      = 50;
-        s.to_call        = 3;
-        s.street_actions = 0;
-
-        s.hole_cards     = draw_random_cards(rng, 0, 2);
-        s.opp_hole_cards = draw_random_cards(rng, s.hole_cards, 2);
-        s.board_cards    = 0;
-
-        s.action_mask = FOLD_MASK | CALL_MASK | BET_SMALL_MASK | BET_BIG_MASK;
-
-        solver.traverse(s, 1.f, 1.f, rng);
-
-        if ((i + 1) % 100 == 0)
-            std::cout << "  " << (i + 1) << " / " << iterations << "\n";
-    }
-
-    std::cout << "Training done. Infosets: " << solver.get_infosets().size() << "\n\n";
-
+void print_example_lookups(MCCFR& solver) {
     // ── Test hands ──────────────────────────────────────────────────────
     std::cout << "========== EXAMPLE LOOKUPS ==========\n\n";
 
@@ -150,6 +119,47 @@ int main() {
     print_strategy("96o gutshot on 7-8-2, facing bet (to_call=7)",
         solver, make_test_key(nine_six, draw_board, Street::FLOP, Position::IN_POSITION, 1, 7));
 
+    // AhKh: made flush on monotone board
+    CardsMask ace_king_hearts = card_to_mask(Rank::ACE,  Suit::HEARTS)
+                              | card_to_mask(Rank::KING, Suit::HEARTS);
+    CardsMask monotone_hearts = card_to_mask(Rank::QUEEN, Suit::HEARTS)
+                              | card_to_mask(Rank::SEVEN, Suit::HEARTS)
+                              | card_to_mask(Rank::TWO,   Suit::HEARTS);
+    print_strategy("AhKh made flush on Qh-7h-2h, first to act (to_call=0)",
+        solver, make_test_key(ace_king_hearts, monotone_hearts, Street::FLOP, Position::OUT_OF_POSITION, 0, 0));
+
+    // AhKh: nut flush draw on two-heart board
+    CardsMask two_heart_board = card_to_mask(Rank::QUEEN, Suit::HEARTS)
+                              | card_to_mask(Rank::SEVEN, Suit::HEARTS)
+                              | card_to_mask(Rank::TWO,   Suit::CLUBS);
+    print_strategy("AhKh nut flush draw on Qh-7h-2c, facing bet (to_call=7)",
+        solver, make_test_key(ace_king_hearts, two_heart_board, Street::FLOP, Position::IN_POSITION, 1, 7));
+
+    // 98o: made straight on 7-6-5
+    CardsMask nine_eight = card_to_mask(Rank::NINE,  Suit::CLUBS)
+                         | card_to_mask(Rank::EIGHT, Suit::DIAMONDS);
+    CardsMask straight_board = card_to_mask(Rank::SEVEN, Suit::SPADES)
+                             | card_to_mask(Rank::SIX,   Suit::HEARTS)
+                             | card_to_mask(Rank::FIVE,  Suit::CLUBS);
+    print_strategy("98o flopped straight on 7-6-5, first to act (to_call=0)",
+        solver, make_test_key(nine_eight, straight_board, Street::FLOP, Position::OUT_OF_POSITION, 0, 0));
+
+    // 98o: open-ended straight draw on 7-6-2
+    CardsMask oesd_board = card_to_mask(Rank::SEVEN, Suit::SPADES)
+                         | card_to_mask(Rank::SIX,   Suit::HEARTS)
+                         | card_to_mask(Rank::TWO,   Suit::CLUBS);
+    print_strategy("98o open-ended straight draw on 7-6-2, facing bet (to_call=7)",
+        solver, make_test_key(nine_eight, oesd_board, Street::FLOP, Position::IN_POSITION, 1, 7));
+
+    // AKo: gutshot to Broadway on Q-J-2
+    CardsMask ace_king_off = card_to_mask(Rank::ACE,  Suit::CLUBS)
+                           | card_to_mask(Rank::KING, Suit::DIAMONDS);
+    CardsMask gutshot_board = card_to_mask(Rank::QUEEN, Suit::SPADES)
+                            | card_to_mask(Rank::JACK,  Suit::HEARTS)
+                            | card_to_mask(Rank::TWO,   Suit::DIAMONDS);
+    print_strategy("AKo gutshot (to T) on Q-J-2, first to act (to_call=0)",
+        solver, make_test_key(ace_king_off, gutshot_board, Street::FLOP, Position::OUT_OF_POSITION, 0, 0));
+
     // ── River ────────────────────────────────────────────────────────────
     // AA: aces full on A-K-Q-4-2
     CardsMask river_aces  = card_to_mask(Rank::ACE, Suit::HEARTS)
@@ -174,6 +184,45 @@ int main() {
                         | card_to_mask(Rank::SEVEN, Suit::HEARTS);
     print_strategy("23o (air) on K-Q-J-9-7 river, facing big bet (to_call=7)",
         solver, make_test_key(air, scary_run, Street::RIVER, Position::IN_POSITION, 1, 7));
+}
+
+int main() {
+    srand(time(0));
+    uint32_t rng = random_utils::init_rng(static_cast<uint32_t>(rand()));
+
+    //experiments::run_ehs_iterations_experiment();
+
+    // ── Train ───────────────────────────────────────────────────────────
+    MCCFR solver;
+    const int iterations = 3000;
+
+    std::cout << "Training MCCFR (" << iterations << " iterations)...\n";
+    for (int i = 0; i < iterations; ++i) {
+        DecisionState s;
+        s.hand_id        = 1;
+        s.street         = Street::PREFLOP;
+        s.position       = Position::OUT_OF_POSITION;
+        s.pot_size       = 9;
+        s.stack_self     = 50;
+        s.stack_opp      = 50;
+        s.to_call        = 3;
+        s.street_actions = 0;
+
+        s.hole_cards     = draw_random_cards(rng, 0, 2);
+        s.opp_hole_cards = draw_random_cards(rng, s.hole_cards, 2);
+        s.board_cards    = 0;
+
+        s.action_mask = FOLD_MASK | CALL_MASK | BET_SMALL_MASK | BET_BIG_MASK;
+
+        solver.traverse(s, 1.f, 1.f, rng);
+
+        if ((i + 1) % 100 == 0)
+            std::cout << "  " << (i + 1) << " / " << iterations << "\n";
+    }
+
+    std::cout << "Training done. Infosets: " << solver.get_infosets().size() << "\n\n";
+
+    print_example_lookups(solver);
 
     return 0;
 }

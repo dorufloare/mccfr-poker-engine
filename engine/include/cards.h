@@ -82,14 +82,23 @@ inline int cardsInMask(cards::CardsMask x) noexcept {
 
 inline std::string mask_to_string(CardsMask mask) {
     std::string result;
-    for (int s = 0; s < SUITS; ++s) {
-        for (int r = 0; r < RANKS; ++r) {
+    static constexpr int suit_order[] = {
+        static_cast<int>(Suit::SPADES),
+        static_cast<int>(Suit::HEARTS),
+        static_cast<int>(Suit::DIAMONDS),
+        static_cast<int>(Suit::CLUBS)
+    };
+
+    for (int r = RANKS - 1; r >= 0; --r) {
+        for (int s : suit_order) {
             if (mask & (1ULL << (s * RANKS + r))) {
-                char rank_char = "23456789TJQKA"[r];
-                char suit_char = "CDHS"[s];
+                if (!result.empty()) {
+                    result += ' ';
+                }
+                const char rank_char = "23456789TJQKA"[r];
+                const char suit_char = "cdhs"[s];
                 result += rank_char;
                 result += suit_char;
-                result += ' ';
             }
         }
     }

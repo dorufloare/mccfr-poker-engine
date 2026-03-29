@@ -14,6 +14,7 @@ float MCCFR::traverse(const state::DecisionState& state, float reach_self, float
     }
 
     InfoSet& infoset = get_infoset(state);
+    infoset.visit_count++;
     float strategy[action::ACTIONS];
     float action_values[action::ACTIONS] = {};
 

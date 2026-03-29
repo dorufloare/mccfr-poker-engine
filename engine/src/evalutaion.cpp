@@ -242,6 +242,7 @@ float evaluate_hand_EHS(const state::DecisionState& state, uint32_t& rng, int nu
     return HS * (1.0f - NP) + (1.0f - HS) * PP;
 }
 
+// keep draw types the same for now, probably not worth separating them yet
 uint8_t get_straight_draw(cards::CardsMask hand) noexcept {
    if (has_open_ended_straight_draw(hand)) return 1;
    if (has_gunshot_straight_draw(hand)) return 1;
